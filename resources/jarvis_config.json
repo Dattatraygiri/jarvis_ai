@@ -1,0 +1,8 @@
+{
+  "model": "qwen2.5:3b",
+  "ollama_url": "http://127.0.0.1:11434/api/chat",
+  "control_port": 47831,
+  "wake_phrase": "hey jarvis",
+  "speech_model_path": "resources/vosk-model-en-us-0.22-lgraph",
+  "instructions": "Follow requests only when they fit the built-in actions. Never delete or modify files, run arbitrary commands, access anything outside this project, or reveal secrets. Ask the user to restate a request if its intent is unclear."
+}
