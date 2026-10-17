@@ -11,6 +11,7 @@ from unittest.mock import patch
 from src.ai_initialization import JarvisAI
 from src.voice_assistant import (
 	_serve_control_requests,
+	_average_word_confidence,
 	_discard_queued_audio,
 	build_wake_grammar,
 	extract_wake_command,
@@ -102,6 +103,13 @@ class AssistantSafetyTests(unittest.TestCase):
 		buffered.put(b"assistant echo")
 		_discard_queued_audio(buffered)
 		self.assertTrue(buffered.empty())
+
+	def test_asr_confidence_is_averaged_when_available(self) -> None:
+		self.assertAlmostEqual(
+			_average_word_confidence({"result": [{"conf": 0.8}, {"conf": 0.6}]}),
+			0.7,
+		)
+		self.assertIsNone(_average_word_confidence({"text": "no scores"}))
 
 	def test_local_control_can_report_status_and_stop(self) -> None:
 		listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

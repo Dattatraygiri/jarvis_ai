@@ -53,6 +53,20 @@ def build_wake_grammar(wake_phrase: str) -> str:
 	return json.dumps([wake_phrase.lower(), "[unk]"])
 
 
+def _average_word_confidence(result: dict[str, object]) -> float | None:
+	words = result.get("result")
+	if not isinstance(words, list):
+		return None
+	confidences = [
+		word["conf"]
+		for word in words
+		if isinstance(word, dict) and isinstance(word.get("conf"), (int, float))
+	]
+	if not confidences:
+		return None
+	return sum(confidences) / len(confidences)
+
+
 def _discard_queued_audio(audio_queue: queue.Queue[bytes]) -> None:
 	while True:
 		try:
@@ -153,6 +167,7 @@ def run() -> int:
 			speech_model, 16000, build_wake_grammar(wake_phrase)
 		)
 		recognizer = vosk.KaldiRecognizer(speech_model, 16000)
+		recognizer.SetWords(True)
 		speaker = pyttsx3.init()
 	except Exception as error:
 		print(f"Jarvis could not initialize audio: {error}", file=sys.stderr)
@@ -271,11 +286,20 @@ def run() -> int:
 					last_partial = partial
 					continue
 				last_partial = ""
-				transcript = json.loads(recognizer.Result()).get("text", "").strip()
+				recognition = json.loads(recognizer.Result())
+				transcript = recognition.get("text", "").strip()
 				if not transcript:
 					continue
-				print(f"You: {transcript}", flush=True)
+				confidence = _average_word_confidence(recognition)
+				confidence_text = f" ({confidence:.2f})" if confidence is not None else ""
+				print(f"You{confidence_text}: {transcript}", flush=True)
+				if confidence is not None and confidence < 0.45:
+					speak("I didn't catch that clearly. Please repeat.")
+					continue
 				if is_exit_phrase(transcript):
+					if confidence is not None and confidence < 0.80:
+						speak("Please say exit more clearly to close Jarvis.")
+						continue
 					stopping.set()
 					break
 
